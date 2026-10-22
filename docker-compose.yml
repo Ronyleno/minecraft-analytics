@@ -1,0 +1,98 @@
+services:
+  superset:
+    image: apache/superset:latest
+    container_name: superset
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    newtorks:
+      - analytics_net
+    environment:
+      - SUPERSET_LOAD_EXAMPLES=no
+
+  vector:
+    image: timberio/vector:latest-debian
+    container_name: vector
+    restart: unless-stopped
+    volumes:
+      - ./vector.toml:/etc/vector/vector.toml:ro
+      - ./mc-server-data/world/activity_logs:logs:ro
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    networks:
+      - analytics_net
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse
+    restart: unless-stopped
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./init-db:docker-entrypoint-initdb.d
+    environment:
+      - CLICKHOUSE_USER: admin
+      - CLICKHOUSE_PASSWORD: strong_password
+    networks:
+      - analytics_net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  tabix:
+    image: spoonest/clickhouse-tabix-web-client:latest
+    container_name: tabix
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    newtorks:
+      - analytics_net
+
+  minecraft:
+    container_name: minecraft
+    image: itzg/minecraft-server:java21
+    tty: true
+    stdin_open: true
+    ports:
+      - "25565:25565"
+    environment:
+      EULA: "TRUE"
+      TYPE: "AUTO_CURSEFORGE"
+      VERSION: "1.21.1"
+      CF_PAGE_URL: "https://www.curseforge.com/minecraft/modpacks/ftb-stoneblock-4/https:/\
+        /www.curseforge.com/minecraft/modpacks/ftb-stoneblock-4/files/9282328"
+      MEMORY: "10240M"
+      MAX_PLAYERS: "10"
+      MOTD: "§a§lСК сезон 3 §8• §fЖестко долбим камень
+
+        §7Играем минимум 4 часа в день"
+      ICON: "./server_icon"
+      OVERRIDE_ICON: "true"
+      ONLINE_MODE: "true"
+      USE_AIKAR_FLAGS: "false"
+      DIFFICULTY: "2"
+      SIMULATION_DISTANCE: "12"
+      VIEW_DISTANCE: "12"
+      SEED: "ck"
+      LEVEL: "ck-stone"
+      SPAWN_PROTECTION: "0"
+      OPS: |-
+        b8f99747-0653-49b4-831e-6c55e0a2d1b5
+      CURSEFORGE_FILES: |-
+        https://www.curseforge.com/minecraft/modpacks/ftb-stoneblock-4/files/9282328
+      RCON_CMDS_STARTUP: |-
+        gamerule playersSleepingPercentage 1
+      PAUSE_WHEN_EMPTY_SECONDS: "100000"
+      ALLOW_FLIGHT: "false"
+      ANNOUNCE_PLAYER_ACHIEVEMENTS: "true"
+      SERVER_NAME: "SK stone"
+      LOG_TIMESTAMP: "true"
+    volumes:
+      - "./mc-server-data:/data"
+    networks:
+      - analytics_net
