@@ -2,6 +2,7 @@ services:
   superset:
     image: apache/superset:latest
     container_name: superset
+    entrypoint: [ "/bin/bash", "/app/init/superset-init.sh" ]
     restart: unless-stopped
     ports:
       - "8088:8088"
@@ -16,8 +17,15 @@ services:
       DATABASE_USER: superset
       DATABASE_PORT: 5432
       DATABASE_DIALECT: postgresql
+
+      SUPERSET_ADMIN_USERNAME: admin
+      SUPERSET_ADMIN_FIRSTNAME: Admin
+      SUPERSET_ADMIN_LASTNAME: Main
+      SUPERSET_ADMIN_EMAIL: shosh@bebra.ck
+      SUPERSET_ADMIN_PASSWORD: your_secure_password_here
     volumes:
       - superset_home:/app/superset_home
+      - ./init/superset-init.sh:/app/init/superset-init.sh
 
   vector:
     image: timberio/vector:latest-debian
@@ -41,7 +49,7 @@ services:
       - "9000:9000"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
-      - ./init-db:/docker-entrypoint-initdb.d
+      - ./init:/docker-entrypoint-initdb.d
     environment:
       CLICKHOUSE_USER: admin
       CLICKHOUSE_PASSWORD: strong_password
@@ -64,12 +72,17 @@ services:
 
   minecraft:
     container_name: minecraft
+    restart: unless-stopped
     image: itzg/minecraft-server:java21
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     tty: true
     stdin_open: true
     ports:
       - "25565:25565"
     environment:
+      ENABLE_AUTOPAUSE: "false"
       EULA: "TRUE"
       TYPE: "AUTO_CURSEFORGE"
       VERSION: "1.21.1"
@@ -79,7 +92,7 @@ services:
       MOTD: "§a§lСК сезон 3 §8• §fЖестко долбим камень
 
         §7Играем минимум 4 часа в день"
-      ICON: "./server-icon.png"
+      ICON: "server-icon.png"
       OVERRIDE_ICON: "true"
       ONLINE_MODE: "true"
       USE_AIKAR_FLAGS: "false"
@@ -95,13 +108,16 @@ services:
         activity-logger:7811935
       RCON_CMDS_STARTUP: |-
         gamerule playersSleepingPercentage 1
-      PAUSE_WHEN_EMPTY_SECONDS: "100000"
       ALLOW_FLIGHT: "false"
       ANNOUNCE_PLAYER_ACHIEVEMENTS: "true"
       SERVER_NAME: "SK stone"
       LOG_TIMESTAMP: "true"
+      FORCE_REDOWNLOAD: "false"
+      DO_NOT_OVERWRITE_CONFIGS: "true"
+      EXCLUDE_FROM_EXTRACT: "saves/**,world/**,ck-stone/**"
     volumes:
-      - "./mc-server-data:/data"
+      - ./mc-server-data:/data
+      - ./server-icon.png:/data/server-icon.png:ro
     networks:
       - analytics_net
 
