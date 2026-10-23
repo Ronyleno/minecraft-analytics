@@ -5,10 +5,19 @@ services:
     restart: unless-stopped
     ports:
       - "8088:8088"
-    newtorks:
+    networks:
       - analytics_net
     environment:
-      - SUPERSET_LOAD_EXAMPLES=no
+      SUPERSET_LOAD_EXAMPLES: no
+      SUPERSET_SECRET_KEY: your_secret_key_here
+      DATABASE_DB: superset
+      DATABASE_HOST: superset_db
+      DATABASE_PASSWORD: superset
+      DATABASE_USER: superset
+      DATABASE_PORT: 5432
+      DATABASE_DIALECT: postgresql
+    volumes:
+      - superset_home:/app/superset_home
 
   vector:
     image: timberio/vector:latest-debian
@@ -16,7 +25,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./vector.toml:/etc/vector/vector.toml:ro
-      - ./mc-server-data/world/activity_logs:logs:ro
+      - ./mc-server-data/ck-stone/activity_logs:/logs:ro
     depends_on:
       clickhouse:
         condition: service_healthy
@@ -32,10 +41,10 @@ services:
       - "9000:9000"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
-      - ./init-db:docker-entrypoint-initdb.d
+      - ./init-db:/docker-entrypoint-initdb.d
     environment:
-      - CLICKHOUSE_USER: admin
-      - CLICKHOUSE_PASSWORD: strong_password
+      CLICKHOUSE_USER: admin
+      CLICKHOUSE_PASSWORD: strong_password
     networks:
       - analytics_net
     healthcheck:
@@ -49,8 +58,8 @@ services:
     container_name: tabix
     restart: unless-stopped
     ports:
-      - "8088:8088"
-    newtorks:
+      - "8090:80"
+    networks:
       - analytics_net
 
   minecraft:
@@ -64,14 +73,13 @@ services:
       EULA: "TRUE"
       TYPE: "AUTO_CURSEFORGE"
       VERSION: "1.21.1"
-      CF_PAGE_URL: "https://www.curseforge.com/minecraft/modpacks/ftb-stoneblock-4/https:/\
-        /www.curseforge.com/minecraft/modpacks/ftb-stoneblock-4/files/9282328"
+      CF_PAGE_URL: https://www.curseforge.com/minecraft/modpacks/ftb-stoneblock-4/files/9282328
       MEMORY: "10240M"
       MAX_PLAYERS: "10"
       MOTD: "§a§lСК сезон 3 §8• §fЖестко долбим камень
 
         §7Играем минимум 4 часа в день"
-      ICON: "./server_icon"
+      ICON: "./server-icon.png"
       OVERRIDE_ICON: "true"
       ONLINE_MODE: "true"
       USE_AIKAR_FLAGS: "false"
@@ -83,8 +91,8 @@ services:
       SPAWN_PROTECTION: "0"
       OPS: |-
         b8f99747-0653-49b4-831e-6c55e0a2d1b5
-      CURSEFORGE_FILES: |-
-        https://www.curseforge.com/minecraft/modpacks/ftb-stoneblock-4/files/9282328
+      CURSEFORGE_FILED: |- 
+        activity-logger:7811935
       RCON_CMDS_STARTUP: |-
         gamerule playersSleepingPercentage 1
       PAUSE_WHEN_EMPTY_SECONDS: "100000"
@@ -96,3 +104,12 @@ services:
       - "./mc-server-data:/data"
     networks:
       - analytics_net
+
+networks:
+  analytics_net:
+    driver: bridge
+
+volumes:
+  clickhouse_data:
+  superset_home:
+
